@@ -104,18 +104,38 @@ def ingest(year, month, bucket):
         print('Cleaning up by removing {}'.format(tempdir))
         shutil.rmtree(tempdir)
 
+def next_month(bucketname):
+    client = storage.Client()
+    bucket = client.get_bucket(bucketname)
+    blobs = list(bucket.list_blobs(prefix='flights/raw'))
+    files = [blob.name for blob in blobs if 'csv' in blob.name]
+    lastfile = os.path.basename(files[-1])
+    year = lastfile[:4]
+    month = lastfile[4:6]
+    dt = datetime.datetime(int(year), int(month), 15) # 15th of month
+    dt = dt + datetime.timedelta(30)
+    return '{}'.format(dt.year), '{:02d}'.format(dt.month)
+
 if __name__ == '__main__':
     import argparse
     parser = argparse.ArgumentParser(description=
         'ingest flights data from BTS website to GCS')
     parser.add_argument('-b', '--bucket',
         help='GCS bucket to upload data to', required=True)
-    parser.add_argument('-y', '--year', help='Example: 2015', required=True)
-    parser.add_argument('-m', '--month', help='Specify: 01 for January', required=True)
+    parser.add_argument('-y', '--year', help='Example: 2015')
+    parser.add_argument('-m', '--month', help='Specify: 01 for January')
 
     try:
         args = parser.parse_args()
-        gcsfile = ingest(args.year, args.month, args.bucket)
+        if args.year is None or args.month is None:
+            year, month = next_month(args.bucket)
+        else:
+            year = args.year
+            month = args.month
+        print('bucket: ', args.bucket)
+        print('year: ', year)
+        print('month: ', month)
+        gcsfile = ingest(year, month, args.bucket)
         print('Success ... ingest to {}'.format(gcsfile))
     except DataUnavailable as e:
         print('Try again later: {}'.format(e.msg))
