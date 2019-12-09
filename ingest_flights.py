@@ -4,6 +4,7 @@ import os
 import zipfile
 import datetime
 import tempfile
+from urllib.request import urlopen
 from google.cloud import storage
 from google.cloud.storage import Blob
 
@@ -17,12 +18,12 @@ def download(YEAR, MONTH, destdir):
        fp.write(response.read())
     return filename
 
-def zip_to_csv(fileneme, destdir):
+def zip_to_csv(filename, destdir):
     cwd = os.getcwd()
     zip_ref = zipfile.ZipFile(filename,'r')
-    os.chdir(dest_dir) # change dir
+    os.chdir(destdir) # change dir
     zip_ref.extractall()
-    csvfile = os.path.join(dest_dir, zip_ref.namelist()[0])
+    csvfile = os.path.join(destdir, zip_ref.namelist()[0])
     zip_ref.close()
     os.chdir(cwd)
     return csvfile
@@ -71,7 +72,7 @@ def verify_ingest(outfile):
 
         if next(outfp, None) == None:
             os.remove(outfile)
-            msg = 'Received a file from BTS'\
+            msg = 'Received a file from BTS '\
                 'that has only the header and no content'
             logging.error(msg)
             raise DataUnavailable(msg)
@@ -107,14 +108,14 @@ if __name__ == '__main__':
     import argparse
     parser = argparse.ArgumentParser(description=
         'ingest flights data from BTS website to GCS')
-    parser.add_argument('-b, --bucket',
+    parser.add_argument('-b', '--bucket',
         help='GCS bucket to upload data to', required=True)
-    parser.add_argument('-y, --year', help='Example: 2015', required=True)
-    parser.add_argument('-m, --month', help='Specify: 01 for January', required=True)
+    parser.add_argument('-y', '--year', help='Example: 2015', required=True)
+    parser.add_argument('-m', '--month', help='Specify: 01 for January', required=True)
 
     try:
         args = parser.parse_args()
         gcsfile = ingest(args.year, args.month, args.bucket)
         print('Success ... ingest to {}'.format(gcsfile))
     except DataUnavailable as e:
-        print('Try again later: {}'.format(e.message))
+        print('Try again later: {}'.format(e.msg))
