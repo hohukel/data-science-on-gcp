@@ -1,7 +1,7 @@
 runtime: python
 env: flex
-entrypoint: gunicorn -b $PORT ingest-app.py
-service: default
+entrypoint: gunicorn -b :$PORT ingest-app.py
+service: flights
 manual_scaling:
   instances: 1
 
