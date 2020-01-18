@@ -2,7 +2,6 @@
 export INSTANCE_NAME=flights-instance
 export IP=$(curl http://ipecho.net/plain)
 
-
 SQL_STATUS=$(gcloud sql instances describe $INSTANCE_NAME | grep state | cut -d' ' -f 2)
 if [ "$SQL_STATUS" != "RUNNABLE" ]; then
   echo "CloudSQLインスタンス起動中..."
