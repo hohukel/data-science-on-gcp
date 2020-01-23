@@ -67,26 +67,51 @@ def tz_correct(line, airport_timezones):
         fields.extend(airport_timezones[arr_airport_id])
         fields[-1] = str(arrtz)
 
-        yield ','.join(fields)
+        yield fields
 
-if __name__ == '__main__':
+# 出発時、登録時、2つのevetログを作成
+def get_next_event(fields):
+    if len(fields[14]) > 0: # DEP_TIME
+        event = fields[:]
+        event.extend(['departed', fields[14]])
+        # TAXI_OUT,WHEELS_OFF,WHEELS_ON,TAXI_IN,ARR_TIME,ARR_DELAY,DIVERTED
+        for f in [16, 17, 18, 19, 21, 22, 25]:
+            event[f] = '' # Not knowable at departure time
+        yield event
+    if len(fields[21]) > 0: # ARR_TIME
+        event = fields[:]
+        event.extend(['arrived', fields[21]])
+        yield event
+
+def run():
     with beam.Pipeline('DirectRunner') as pipeline:
 
         airports = (pipeline
             | 'airports:read' >> beam.io.ReadFromText('airports.csv.gz')
             | 'airports:fields' >> beam.Map(lambda line: next(csv.reader([line])))
             | 'airports:tz' >> beam.Map(lambda fields: (
-                     fields[0], addtimezone(fields[21], fields[26])
-                ))
-        )
+                fields[0], addtimezone(fields[21], fields[26]))))
         
         # 空港データをサイドインプット
-        # pvalue.AsDict: PCollectionを空港IDをキーとするディクショナリに変換
         flights = (pipeline
             | 'flights:read' >> beam.io.ReadFromText('201501_part.csv')
-            | 'flights:tzcorr' >> beam.FlatMap(tz_correct, beam.pvalue.AsDict(airports))
-        ) 
+            | 'flights:tzcorr' >> beam.FlatMap(
+                tz_correct, beam.pvalue.AsDict(airports))) 
+        # 書き込み
+        (flights 
+            | 'flights:tostring' >> beam.Map(lambda fields: ','.join(fields))
+            | 'flights:out' >> beam.io.textio.WriteToText('results/all_flights')
+        )
 
-        flights | beam.io.textio.WriteToText('results/all_flights')
+        # イベントをextend
+        events = flights | beam.FlatMap(get_next_event)
+        # 書き込み
+        (events 
+            | 'events:tostring' >> beam.Map(lambda fields: ','.join(fields))
+            | 'events:out' >> beam.io.textio.WriteToText('results/all_events')
+        )
 
         pipeline.run()
+
+if __name__ == '__main__':
+    run()
