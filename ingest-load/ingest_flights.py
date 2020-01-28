@@ -13,7 +13,7 @@ def download(YEAR, MONTH, destdir):
 
     url = 'https://www.transtats.bts.gov/DownLoad_Table.asp?Table_ID=236&Has_Group=3&Is_Zipped=0'
     filename = os.path.join(destdir, "{}{}.zip".format(YEAR, MONTH))
-    with open (filename, 'wb') as fp:
+    with open(filename, 'wb') as fp:
        response = urlopen(url, PARAMS.encode('utf-8'))
        fp.write(response.read())
     return filename

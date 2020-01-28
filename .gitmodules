@@ -1,0 +1,3 @@
+[submodule "beam_sample"]
+	path = beam_sample
+	url = https://github.com/apache/beam.git
