@@ -92,7 +92,7 @@ def create_row(fields):
     featdict['EVENT_DATA'] = ','.join(fields)
     return featdict
 
-def run():
+def run(project, bucket, dataset):
     argv = [
       '--project={0}'.format(project),
       '--job_name=ch04timecorr',
@@ -104,7 +104,8 @@ def run():
       '--autoscaling_algorithm=THROUGHPUT_BASED',
       '--runner=DataflowRunner'
     ]
-    airports_filename = 'gs://{}/flights/airports/airports.csv.gz'.format(bucket)
+    #airports_filename = 'gs://{}/flights/airports/airports.csv.gz'.format(bucket)
+    airports_filename = 'gs://{}/flights/airports/airports.csv'.format(bucket)
     flights_raw_files = 'gs://{}/flights/raw/*.csv'.format(bucket)
     flights_output = 'gs://{}/flights/tzcorr/all_flights'.format(bucket)
     # simeventsがBQのテーブル名になる
@@ -139,7 +140,7 @@ def run():
         | 'events:out' >> beam.io.Write(beam.io.BigQuerySink(
             events_output, schema=schema,
             write_disposition=beam.io.BigQueryDisposition.WRITE_TRUNCATE,
-            create_disposition=beam.io.BigQueryDisposition,CREATE_IF_NEEDED))
+            create_disposition=beam.io.BigQueryDisposition.CREATE_IF_NEEDED))
     )
 
     pipeline.run()
@@ -152,3 +153,7 @@ if __name__ == '__main__':
     parser.add_argument('-d','--dataset', help='BigQuery dataset', default='flights')
 
     args = vars(parser.parse_args())
+
+    print ("Correcting timestamps and writing to BQ datast {}".format(args['dataset']))
+
+    run(project=args['project'], bucket=args['bucket'], dataset=args['dataset'])
