@@ -1,0 +1,8 @@
+**/outputs*
+outputs*
+**/*.csv*
+*.csv*
+**/build
+**/.ipynb_checkpoints
+streaming-etl/df*py
+streaming-etl/results*
