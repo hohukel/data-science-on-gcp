@@ -9,8 +9,9 @@ import google.cloud.bigquery as bq
 TIME_FORMAT = '%Y-%m-%d %H:%M:%S %Z'
 RFC3339_TIME_FORMAT = '%Y-%m-%dT%H:%M:%S-00:00'
 
+# topics: GCSコンソール上のPub/Subのトピックス
 def publish(publisher, topics, allevents, notify_time):
-    timestamp =notify_time.strftime(RFC3339_TIME_FORMAT)
+    timestamp = notify_time.strftime(RFC3339_TIME_FORMAT)
     for key in topics: # departed, arrived etc..
         topic = topics[key]
         events = allevents[key]
@@ -25,6 +26,13 @@ def publish(publisher, topics, allevents, notify_time):
 """
 def notify(publisher, topics, rows, simStartTime, programStart, speedFactor):
     # sleep computation
+    """
+    simStartTime: argsで与えたstarttime
+    レコードに記録されている時間 - starttime = シミュレーション上の経過時間
+    現在時刻 - プログラム開始時間 = 実世界の経過時間
+    シミュレーション上の経過時間 > 実世界の経過時間
+    -> 実世界の経過時間が間に合うようにsleep
+    """
     def compute_sleep_secs(notify_time):
         time_elapsed = (datetime.datetime.utcnow() - programStart).seconds
         sim_time_elapsed = (notify_time - simStartTime).seconds / speedFactor
