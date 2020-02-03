@@ -19,12 +19,16 @@ def publish(publisher, topics, allevents, notify_time):
         for event_data in events:
             publisher.publish(topic, event_data.encode(), EventTimeStamp=timestamp)
 
+"""
+その時点で発行が必要なイベントをまとめて発行
+次のイベントを発効するべき時間スリープ
+"""
 def notify(publisher, topics, rows, simStartTime, programStart, speedFactor):
     # sleep computation
     def compute_sleep_secs(notify_time):
         time_elapsed = (datetime.datetime.utcnow() - programStart).seconds
         sim_time_elapsed = (notify_time - simStartTime).seconds / speedFactor
-        to_sleep_secs =sim_time_elapsed - time_elapsed
+        to_sleep_secs = sim_time_elapsed - time_elapsed
         return to_sleep_secs
 
     tonotify = {}
@@ -78,7 +82,10 @@ if __name__ == '__main__':
     else:
       jitter = '0'
 
-    # run the query to pull simulated events
+    """
+    シミュレーションする時間範囲のログを取得
+    run the query to pull simulated events
+    """
     querystr = """\
         SELECT
           EVENT,
@@ -97,7 +104,10 @@ if __name__ == '__main__':
         args.endTime
     ))
     
-    # create one Pub/Sub norification topic for each type of event
+    """
+    1ページ分のイベントについてこれらをCloud Pub/Subに発行
+    create one Pub/Sub norification topic for each type of event
+    """
     publisher = pubsub.PublisherClient()
     topics = {}
     for event_type in ['wheelsoff', 'arrived', 'departed']:
