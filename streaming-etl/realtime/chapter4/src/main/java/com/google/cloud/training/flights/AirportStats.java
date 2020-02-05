@@ -12,6 +12,7 @@
  * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
  * License for the specific language governing permissions and limitations under
  * the License.
+ * これまでにけいサインした全ての統計情報を所持
  */
 
 package com.google.cloud.training.flights;
