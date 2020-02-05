@@ -19,47 +19,49 @@ def publish(publisher, topics, allevents, notify_time):
         logging.info('Publishing {} {} till {}'.format(len(events), key, timestamp))
         for event_data in events:
             publisher.publish(topic, event_data.encode(), EventTimeStamp=timestamp)
-
 """
 その時点で発行が必要なイベントをまとめて発行
 次のイベントを発効するべき時間スリープ
 """
 def notify(publisher, topics, rows, simStartTime, programStart, speedFactor):
-    # sleep computation
-    """
-    simStartTime: argsで与えたstarttime
-    レコードに記録されている時間 - starttime = シミュレーション上の経過時間
-    現在時刻 - プログラム開始時間 = 実世界の経過時間
-    シミュレーション上の経過時間 > 実世界の経過時間
-    -> 実世界の経過時間が間に合うようにsleep
-    """
-    def compute_sleep_secs(notify_time):
+   # sleep computation
+   def compute_sleep_secs(notify_time):
         time_elapsed = (datetime.datetime.utcnow() - programStart).seconds
         sim_time_elapsed = (notify_time - simStartTime).seconds / speedFactor
         to_sleep_secs = sim_time_elapsed - time_elapsed
         return to_sleep_secs
 
-    tonotify = {}
-    for key in topics:
-        tonotify[key] = list()
+   tonotify = {}
+   # 初期化
+   for key in topics:
+     tonotify[key] = list()
 
-    for row in rows:
-        event, notify_time, event_data = row
+   for i, row in enumerate(rows):
+       try:
+           logging.info('Row number: {}'.format(i))
+           event, notify_time, event_data = row
+           # シミュレーションタイムがシステム時間より1秒異常リードしたらpublish
+           if compute_sleep_secs(notify_time) > 1:
+              # たまった分publish
+              publish(publisher, topics, tonotify, notify_time)
+              # 初期化
+              for key in topics:
+                 tonotify[key] = list()
 
-        # how much time should we sleep?
-        if compute_sleep_secs(notify_time) > 1:
-            publish(publisher, topics, tonotify, notify_time)
-            for key in topics:
-                tonotify[key] = list()
+              # recompute sleep, since notification takes a while
+              to_sleep_secs = compute_sleep_secs(notify_time)
+              if to_sleep_secs > 0:
+                 logging.info('Sleeping {} seconds'.format(to_sleep_secs))
+                 time.sleep(to_sleep_secs)
+           tonotify[event].append(event_data)
+       except ConnectionResetError:
+           logging.info('Connectionエラーが起きたよ！')
+           logging.info('Sleep 10 secs')
+           time.sleep(10)
 
-            # recompute sleep, since notification takes a while
-            to_sleep_secs = compute_sleep_secs(notify_time)
-            if to_sleep_secs > 0:
-                logging.info('Sleeping {} seconds'.format(to_sleep_secs))
-                time.sleep(to_sleep_secs)
-            tonotify[event].append(event_data)
+   # left-over records; notify again
+   publish(publisher, topics, tonotify, notify_time)
 
-    publish(publisher, topics, tonotify, notify_time)
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Send simulated flight events to Cloud Pub/Sub')
@@ -75,10 +77,15 @@ if __name__ == '__main__':
     parser.add_argument('--jitter',
         help='type of jitter to add: None, uniform, exp are the three options',
         default='None')
-
-    logging.basicConfig(format='(levelname)s: %(message)s', level=logging.INFO)
+    parser.add_argument('--logfile',
+        help='file name output log',
+        default='./log/post_pubsub.log')
 
     args = parser.parse_args()
+
+    logging.basicConfig(format='%(levelname)s: %(message)s',
+            filename=args.logfile,
+            level=logging.INFO)
 
     bqclient = bq.Client(args.project)
     dataset = bqclient.get_dataset(bqclient.dataset('flights'))
@@ -118,7 +125,8 @@ if __name__ == '__main__':
     """
     publisher = pubsub.PublisherClient()
     topics = {}
-    for event_type in ['wheelsoff', 'arrived', 'departed']:
+    #for event_type in ['wheelsoff', 'arrived', 'departed']:
+    for event_type in ['arrived', 'departed']:
         topics[event_type] = publisher.topic_path(args.project, event_type)
         try:
             publisher.get_topic(topics[event_type])
@@ -127,4 +135,7 @@ if __name__ == '__main__':
 
     programStartTime = datetime.datetime.utcnow()
     simStartTime = datetime.datetime.strptime(args.startTime, TIME_FORMAT).replace(tzinfo=pytz.UTC)
-    notify(publisher, topics, rows, simStartTime, programStartTime, args.speedFactor)
+
+    logging.info ('Simulation start time is {}'.format(simStartTime))
+    notify(publisher, topics, rows, simStartTime,
+            programStartTime, args.speedFactor)
