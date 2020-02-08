@@ -1,3 +1,6 @@
 [submodule "beam_sample"]
 	path = beam_sample
 	url = https://github.com/apache/beam.git
+[submodule "cloudml-samples"]
+	path = cloudml-samples
+	url = https://github.com/GoogleCloudPlatform/cloudml-samples
