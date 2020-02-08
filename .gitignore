@@ -4,6 +4,4 @@ outputs*
 *.csv*
 **/build
 **/.ipynb_checkpoints
-streaming-etl/df*py
-streaming-etl/results*
 **/log
