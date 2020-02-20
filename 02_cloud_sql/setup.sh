@@ -1,7 +1,7 @@
 #!/bin/bash
-source export-env.sh
+source ../export-env.sh
 
-SQL_STATUS=$(gcloud sql instances describe $INSTANCE_NAME | grep state | cut -d' ' -f 2)
+SQL_STATUS=$(gcloud sql instances describe $CLOUD_SQL_INSTANCE_NAME | grep state | cut -d' ' -f 2)
 if [ "$SQL_STATUS" != "RUNNABLE" ]; then
   echo "CloudSQLインスタンス起動中..."
   gcloud sql instances patch $INSTANCE_NAME --activation-policy ALWAYS
