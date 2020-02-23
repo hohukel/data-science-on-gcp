@@ -1,5 +1,5 @@
 #!/bin/bash
-
+source ../export-env.sh
 export HOSTNAME=ch6cluster-m
 export PORT=1080
 gcloud compute ssh ${HOSTNAME} \
