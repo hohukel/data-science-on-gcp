@@ -1,7 +1,7 @@
 #!/bin/bash
 
 source ../export-env.sh
-INSTALL=gs://$BUCKET/flights/dataproc/install_on_cluster.sh
+SETUP=gs://$BUCKET/flights/dataproc/setup_cluster.sh
 
 echo "PROJECT=$PROJECT"
 echo "BUCKET=$BUCKET"
@@ -11,8 +11,8 @@ echo "DATA_PROC_CLUSTER=$DATA_PROC_CLUSTER"
 echo "CONDA_ENV_NAME=$CONDA_ENV_NAME"
 
 echo "Upload install file"
-sed "s/CHANGE_TO_USER_NAME/$USER/g" install_on_cluster.sh > /tmp/install_on_cluster.sh
-gsutil cp /tmp/install_on_cluster.sh $INSTALL
+sed "s/CHANGE_TO_USER_NAME/$USER/g" setup_cluster.sh > /tmp/setup_cluster.sh
+gsutil cp /tmp/setup_cluster.sh $SETUP
 
 echo "Create cluster"
 gcloud dataproc clusters create $DATA_PROC_CLUSTER \
@@ -25,4 +25,4 @@ gcloud dataproc clusters create $DATA_PROC_CLUSTER \
     --master-boot-disk-size=15GB \
     --worker-boot-disk-size=15GB \
     --scopes cloud-platform \
-    --initialization-actions $INSTALL,gs://goog-dataproc-initialization-actions-${REGION}/datalab/datalab.sh
+    --initialization-actions $SETUP,gs://goog-dataproc-initialization-actions-${REGION}/datalab/datalab.sh
